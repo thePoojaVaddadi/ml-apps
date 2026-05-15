@@ -1,0 +1,35 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.10
+
+  pre_build:
+    commands:
+      - pip install -r requirements.txt
+
+  build:
+    commands:
+      - echo "Training model..."
+      - python src/train.py
+
+      - echo "Running tests..."
+      - pytest tests/
+
+      - echo "Building Docker image..."
+      - docker build -t house-price-app .
+
+  post_build:
+    commands:
+      - echo "Logging in to ECR..."
+      - aws ecr get-login-password | docker login --username AWS --password-stdin $REPO_URI
+
+      - docker tag house-price-app:latest $REPO_URI:latest
+      - docker push $REPO_URI:latest
+
+      - printf '[{"name":"house-price-app","imageUri":"%s"}]' $REPO_URI:latest > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
