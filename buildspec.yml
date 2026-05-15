@@ -9,6 +9,14 @@ phases:
     commands:
       - pip install -r requirements.txt
 
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+      - REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/house-price-app
+
+      - echo Logging in to Amazon ECR...
+
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPO_URI
+
   build:
     commands:
       - echo "Training model..."
@@ -20,12 +28,12 @@ phases:
       - echo "Building Docker image..."
       - docker build -t house-price-app .
 
+      - docker tag house-price-app:latest $REPO_URI:latest
+
   post_build:
     commands:
-      - echo "Logging in to ECR..."
-      - aws ecr get-login-password | docker login --username AWS --password-stdin $REPO_URI
+      - echo "Pushing Docker image..."
 
-      - docker tag house-price-app:latest $REPO_URI:latest
       - docker push $REPO_URI:latest
 
       - printf '[{"name":"house-price-app","imageUri":"%s"}]' $REPO_URI:latest > imagedefinitions.json
