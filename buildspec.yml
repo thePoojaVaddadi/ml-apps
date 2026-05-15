@@ -10,12 +10,11 @@ phases:
       - pip install -r requirements.txt
 
       - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-      - REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/house-price-app
+      - ECR_REGISTRY=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - REPO_URI=$ECR_REGISTRY/ml-apps
 
       - echo Logging in to Amazon ECR...
-
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPO_URI
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
   build:
     commands:
@@ -26,17 +25,16 @@ phases:
       - pytest tests/
 
       - echo "Building Docker image..."
-      - docker build -t house-price-app .
+      - docker build -t ml-apps .
 
-      - docker tag house-price-app:latest $REPO_URI:latest
+      - docker tag ml-apps:latest $REPO_URI:latest
 
   post_build:
     commands:
       - echo "Pushing Docker image..."
-
       - docker push $REPO_URI:latest
 
-      - printf '[{"name":"house-price-app","imageUri":"%s"}]' $REPO_URI:latest > imagedefinitions.json
+      - printf '[{"name":"ml-apps","imageUri":"%s"}]' $REPO_URI:latest > imagedefinitions.json
 
 artifacts:
   files:
